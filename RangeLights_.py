@@ -5,15 +5,17 @@ if True: #import modules, it's an "if" only to make it collapsable
 	# import time
 	import pygame as pg
 	import math # for the trigonometry functions for the course 
+	import RPi.GPIO as GPIO # for the rumble platform
+	import time# for the rumble platform
 
 if True: #set parameters
-	#screenW = int(2560)  # full screen is 2560 x 1080
-	screenW = int(1920)
+	screenW = int(2560)  # full screen is 2560 x 1080
+	#screenW = int(1920)
 	screenH = int(1080)
 	screenHorizon = screenH/2
 	screenSize = (screenW, screenH)
 	screenFieldOfView = 0.89 # 51 deg in radians, as per Mark's estimate of the screen at arms length
-	bgColour = (20,33,50)
+	bgColour = (20,33,50) # bottom background (not top)
 	maxFramerate = 60 #60 for pi
 
 if not pg.font:
@@ -101,6 +103,7 @@ class Ship:
 		self.angleIncrement = 1
 		self.steeringTime = 38000 #  target duration in ms
 		self.steeringStart = 0 # clock that will be used to keep track
+		self.platform = rumbler() # initialize the platform
 
 		self.reset() # set initial values
 
@@ -164,7 +167,7 @@ class Ship:
 				 # "	DSC:	" + str(round(distance_to_channel_centre, 2)) +
 				 # "	OOC:	" + str(distance_to_channel_centre > channelWidth/2) )
 		crashed = abs(distance_to_channel_centre) > channelWidth/2
-		print ("distToCtr              : ", distance_to_channel_centre) 
+		print ("distToCtr			  : ", distance_to_channel_centre) 
 		
 		if crashed:
 			# play sound
@@ -174,7 +177,8 @@ class Ship:
 			pg.mixer.music.play()
 			
 			# rock platform (still need to set that up)
-		
+			self.platform.crash()
+			
 		return crashed
 
 	def completedPasseage(self): 
@@ -190,8 +194,8 @@ class RangeLight(pg.sprite.Sprite):
 		pg.sprite.Sprite.__init__(self)  # call intializer of parent class
 		
 		# set parameters
-		self.zoomDistanceFactor =  .5		# fudge to zoom orig image size
-		self.HorizonDropFactor = 1			# fudge to make island look like it starts out "at horizon"
+		self.zoomDistanceFactor =  .3# .5		# fudge to zoom orig image size
+		self.HorizonDropFactor = 1.2# 1			# fudge to make island look like it starts out "at horizon"
 		self.sideOffset = sideOffset		# fudge to compensate for tower not in centre of island/image
 		self.heightOffset = heightOffset	# fudge to drop island/image reasonably to horizon
 		
@@ -253,9 +257,14 @@ class RangeLight(pg.sprite.Sprite):
 
 class backgroundVideo: 
 	def __init__(self, 
-				frameCount = 2, # should be 720, mem err if > 680 for 1920
+				frameCount = 680, # should be 720, mem err if > 680 for 1920
+				
 				imgPath = "images/Background/IMG_2560x490/", # IMG_1920x490/", # "IMG_2560x490/"
 				imgFilePrefix = "IMG_WAVE", 
+				
+				#imgPath = "images/Background/blenderWaves/",
+				#imgFilePrefix = "waves2_", 
+				
 				imgFilePostfix = ".bmp"): 
 		self.image_array = []
 		self.frameCount = frameCount
@@ -273,6 +282,36 @@ class backgroundVideo:
 		self.i = self.i + 1
 		if self.i > self.frameCount-2: self.i = 0
 
+class rumbler:
+	def __init__(self):
+		GPIO.setmode(GPIO.BCM)
+		GPIO.setup(23, GPIO.OUT)
+		GPIO.output(23, GPIO.LOW) # Want this set low since it's the state when the Pi boots
+		
+	def test(self):
+		countUp = 0
+		while True:
+			GPIO.output(23, GPIO.LOW)
+			time.sleep(0.8) # OFF for 800ms
+			GPIO.output(23, GPIO.HIGH)
+			countUp = countUp + 1
+			print(countUp) # print cycle count
+			time.sleep(0.2) # ON for 200ms
+			
+	def crash(self): 
+		time.sleep(0.5) #wait so it lines up with the sound
+		GPIO.output(23, GPIO.HIGH)
+		time.sleep(0.1)
+		GPIO.output(23, GPIO.LOW)
+		time.sleep(0.1) 
+		GPIO.output(23, GPIO.HIGH)
+		time.sleep(0.2)
+		GPIO.output(23, GPIO.LOW)
+		time.sleep(0.1) 
+		GPIO.output(23, GPIO.HIGH)
+		time.sleep(0.4)
+		GPIO.output(23, GPIO.LOW)
+
 def main():
 	if True: # do one-time stuff
 		# Initialize everything
@@ -285,22 +324,25 @@ def main():
 		background_bottom = pg.Surface((screenW, int(screenH/2)))
 		background_bottom.fill(bgColour)
 		background_bottom = background_bottom.convert()
-		background_top, background_top_rect = load_image("images/Background/IMG_BACKGROUND.bmp")
+		#background_top, background_top_rect = load_image("images/Background/IMG_BACKGROUND.bmp")
+		background_top, background_top_rect = load_image("images/Background/RageLights_background_gray.png")
 		background_top.convert()
 		Waves = backgroundVideo()
 		
 		# Put text on the background, centered
-		if pg.font:
-			font = pg.font.Font(None, 36)
-			text = font.render("use left and right arrow to turn rudder indicator; ESC to quit", 1, (10, 10, 10))
-			textpos = text.get_rect(centerx=screenW / 2)
-			background_top.blit(text, textpos)
+		# if pg.font:
+			# font = pg.font.Font(None, 36)
+			# text = font.render("use left and right arrow to turn rudder indicator; ESC to quit", 1, (10, 10, 10))
+			# textpos = text.get_rect(centerx=screenW / 2)
+			# background_top.blit(text, textpos)
 
 		# Prepare Game Objects
 		clock = pg.time.Clock()
 		HMS_Squirrel = Ship()
-		farLight = RangeLight("images/RangeLights/IMG_LIGHT_FAR.png", 25, 0.2, -12, -50) # 0.008 good start angle)
-		nearLight = RangeLight("images/RangeLights/IMG_LIGHT_NEAR.png", 20, 0.24, -10, -40) #0.05 good start)
+		#farLight = RangeLight("images/RangeLights/IMG_LIGHT_FAR.png", 25, 0.2, -12, -50) # 0.008 good start angle)
+		#nearLight = RangeLight("images/RangeLights/IMG_LIGHT_NEAR.png", 20, 0.24, -10, -40) #0.05 good start)
+		farLight = RangeLight("images/RangeLights/IMG_LIGHT_FAR_FUZZ.png", 25, 0.2, -12, -50) # 0.008 good start angle)
+		nearLight = RangeLight("images/RangeLights/IMG_LIGHT_NEAR_FUZZ.png", 20, 0.24, -10, -40) #0.05 good start)
 		msgBox = MsgBox("images/Messages/Msg_Intro.png")
 		rudderIndicator = RudderIndicator(0)
 		allsprites = pg.sprite.RenderPlain((farLight, nearLight, rudderIndicator, msgBox))
