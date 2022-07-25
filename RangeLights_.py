@@ -12,7 +12,7 @@ if True: #set parameters
 	screenW = int(2560)  # full screen is 2560 x 1080
 	#screenW = int(1920)
 	screenH = int(1080)
-	screenHorizon = screenH/2
+	screenHorizon = 690  # horizon is a bit below centre and these are the numbers used in vid and bmp
 	screenSize = (screenW, screenH)
 	screenFieldOfView = 0.89 # 51 deg in radians, as per Mark's estimate of the screen at arms length
 	bgColour = (20,33,50) # bottom background (not top)
@@ -176,8 +176,8 @@ class Ship:
 			pg.mixer.music.load("audio/crash.mp3")
 			pg.mixer.music.play()
 			
-			# rock platform (still need to set that up)
-			self.platform.crash()
+			time.sleep(0.3)         # delay to get to the noisy part of the clip
+			self.platform.crash()   # rock platform 
 			
 		return crashed
 
@@ -195,7 +195,7 @@ class RangeLight(pg.sprite.Sprite):
 		
 		# set parameters
 		self.zoomDistanceFactor =  .3# .5		# fudge to zoom orig image size
-		self.HorizonDropFactor = 1.2# 1			# fudge to make island look like it starts out "at horizon"
+		self.HorizonDropFactor = 1.2 # 1			# fudge to make island look like it starts out "at horizon"
 		self.sideOffset = sideOffset		# fudge to compensate for tower not in centre of island/image
 		self.heightOffset = heightOffset	# fudge to drop island/image reasonably to horizon
 		
@@ -257,15 +257,16 @@ class RangeLight(pg.sprite.Sprite):
 
 class backgroundVideo: 
 	def __init__(self, 
-				frameCount = 680, # should be 720, mem err if > 680 for 1920
+				frameCount = 720, 
 				
-				imgPath = "images/Background/IMG_2560x490/", # IMG_1920x490/", # "IMG_2560x490/"
-				imgFilePrefix = "IMG_WAVE", 
+				#imgPath = "images/Background/IMG_2560x490/", # IMG_1920x490/", # "IMG_2560x490/"
+				#imgFilePrefix = "IMG_WAVE", 
 				
-				#imgPath = "images/Background/blenderWaves/",
-				#imgFilePrefix = "waves2_", 
+				imgPath = "images/Background/blenderWaves/",
+				imgFilePrefix = "waves2_", 
 				
 				imgFilePostfix = ".bmp"): 
+
 		self.image_array = []
 		self.frameCount = frameCount
 
@@ -278,12 +279,13 @@ class backgroundVideo:
 
 	def update(self, screen):
 		# print(str(self.i))
-		screen.blit(self.image_array[self.i], (0,540)) # should really be 590 but then there is a gap at the top, not sure what to make of that quite yet
+		screen.blit(self.image_array[self.i], (0,590)) # 07-23 were testing this with 540 before but there was a gap, this moves the gap to mid screen # should really be 590 but then there is a gap at the top, not sure what to make of that quite yet
 		self.i = self.i + 1
 		if self.i > self.frameCount-2: self.i = 0
 
 class rumbler:
 	def __init__(self):
+		GPIO.setwarnings(False)
 		GPIO.setmode(GPIO.BCM)
 		GPIO.setup(23, GPIO.OUT)
 		GPIO.output(23, GPIO.LOW) # Want this set low since it's the state when the Pi boots
@@ -299,18 +301,22 @@ class rumbler:
 			time.sleep(0.2) # ON for 200ms
 			
 	def crash(self): 
-		time.sleep(0.5) #wait so it lines up with the sound
-		GPIO.output(23, GPIO.HIGH)
+		self.decellerate(100, 60, 0.005)
+		time.sleep(0.05)
+		self.decellerate(80, 40, 0.008)
 		time.sleep(0.1)
-		GPIO.output(23, GPIO.LOW)
-		time.sleep(0.1) 
-		GPIO.output(23, GPIO.HIGH)
-		time.sleep(0.2)
-		GPIO.output(23, GPIO.LOW)
-		time.sleep(0.1) 
-		GPIO.output(23, GPIO.HIGH)
-		time.sleep(0.4)
-		GPIO.output(23, GPIO.LOW)
+		self.decellerate(60, 15, 0.013)
+
+	def decellerate(self, startDutyCycle=80, endDutyCycle=40, timeAtStep=0.005):
+		#start sequence, run briefly at 100 duty cycle to start motor reliably
+		pwm = GPIO.PWM(23, 100) # channel, frequency
+		pwm.start(100)		  # start at 100% dutycycle, won't start w 50
+		time.sleep(0.05)
+		print("decellerate from ", startDutyCycle, " to ", endDutyCycle, " waiting at each level for ", timeAtStep)
+		for x in range (startDutyCycle, endDutyCycle, -1):
+			pwm.ChangeDutyCycle(x)
+			time.sleep(timeAtStep)
+			print(x)
 
 def main():
 	if True: # do one-time stuff
@@ -319,34 +325,25 @@ def main():
 		screen = pg.display.set_mode(screenSize)
 		pg.display.set_caption("Range Lights")
 		pg.mouse.set_visible(0)
-
-		# Create the backgound(s)
-		background_bottom = pg.Surface((screenW, int(screenH/2)))
-		background_bottom.fill(bgColour)
-		background_bottom = background_bottom.convert()
-		#background_top, background_top_rect = load_image("images/Background/IMG_BACKGROUND.bmp")
-		background_top, background_top_rect = load_image("images/Background/RageLights_background_gray.png")
+		
+		# Create the backgound
+		background_top, background_top_rect = load_image("images/Background/IMG_BACKGROUND2560x690.bmp")
+		#background_top, background_top_rect = load_image("images/Background/IMG_BACKGROUND2560.bmp")
 		background_top.convert()
+		
 		Waves = backgroundVideo()
 		
-		# Put text on the background, centered
-		# if pg.font:
-			# font = pg.font.Font(None, 36)
-			# text = font.render("use left and right arrow to turn rudder indicator; ESC to quit", 1, (10, 10, 10))
-			# textpos = text.get_rect(centerx=screenW / 2)
-			# background_top.blit(text, textpos)
-
 		# Prepare Game Objects
 		clock = pg.time.Clock()
 		HMS_Squirrel = Ship()
-		#farLight = RangeLight("images/RangeLights/IMG_LIGHT_FAR.png", 25, 0.2, -12, -50) # 0.008 good start angle)
-		#nearLight = RangeLight("images/RangeLights/IMG_LIGHT_NEAR.png", 20, 0.24, -10, -40) #0.05 good start)
-		farLight = RangeLight("images/RangeLights/IMG_LIGHT_FAR_FUZZ.png", 25, 0.2, -12, -50) # 0.008 good start angle)
-		nearLight = RangeLight("images/RangeLights/IMG_LIGHT_NEAR_FUZZ.png", 20, 0.24, -10, -40) #0.05 good start)
+		farLight = RangeLight("images/RangeLights/IMG_LIGHT_FAR.png", 25, 0.2, -12, -145) # 0.008 good start angle)
+		nearLight = RangeLight("images/RangeLights/IMG_LIGHT_NEAR.png", 20, 0.24, -10, -135) #0.05 good start)
 		msgBox = MsgBox("images/Messages/Msg_Intro.png")
 		rudderIndicator = RudderIndicator(0)
 		allsprites = pg.sprite.RenderPlain((farLight, nearLight, rudderIndicator, msgBox))
-
+		
+		#pygame.event.clear() # flush event cache so any twirling of the wheel during load gets ignored
+	
 	# Main Loop
 	idling = False # True COMMENT OUT NEXT LINE WHEN SETTING TO TRUE
 	steeringStart = pg.time.get_ticks() 
@@ -355,7 +352,6 @@ def main():
 	while not quitting:
 		###clock.tick(maxFramerate)
 		screen.blit(background_top, (0, 0))
-		screen.blit(background_bottom, (0, screenH/2))
 		Waves.update(screen)
 		
 		if idling:
