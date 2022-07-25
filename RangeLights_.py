@@ -176,7 +176,7 @@ class Ship:
 			pg.mixer.music.load("audio/crash.mp3")
 			pg.mixer.music.play()
 			
-			time.sleep(0.3)         # delay to get to the noisy part of the clip
+			time.sleep(0.6)         # delay to get to the noisy part of the clip
 			self.platform.crash()   # rock platform 
 			
 		return crashed
