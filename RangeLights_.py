@@ -40,12 +40,12 @@ class MsgBox(pg.sprite.Sprite):
 		self.LastSteered = pg.time.get_ticks() - 10000000   # global time variable to track last steering event, used for msgbox re-hiding
 		self.hideMsg()
 		self.showing = False                                # set indicator variable so external code can see if showing
-		self.messageImage = messageImage
+		self.messageImage = messageImage                    # change indicator variable so external code can see what is showing
 		
 	def show(self, messageImage="", showDuration=3000):
 		self.showing = True                                 # change indicator variable so external code can see if showing
 		self.showDuration = showDuration
-		self.messageImage = messageImage
+		self.messageImage = messageImage                    # change indicator variable so external code can see what is showing
 		
 		if messageImage > "": 
 			self.imageBase, self.rect = load_image(messageImage)
@@ -66,7 +66,9 @@ class MsgBox(pg.sprite.Sprite):
 		self.rect.left = screenW + 10                       # move off screen
 	
 	def wait(self):           # wait until done; this would happen anyway, but having this allows to suspend game flow while waiting rather than keeping game flow going and eg crashing while msg is up      
-		pg.time.delay(self.showDuration) 
+		if self.showing: 
+			pg.time.delay(self.showDuration) 
+			pg.event.clear() # flush event cache so any twirling of the wheel during wait gets ignored
 		
 	def update(self):
 		if self.EndShowAt > pg.time.get_ticks() or self.EndShowAt == -1 : 
@@ -345,7 +347,7 @@ def main():
 		rudderIndicator = RudderIndicator(0)
 		allsprites = pg.sprite.RenderPlain((farLight, nearLight, rudderIndicator, msgBox))
 		
-		#pygame.event.clear() # flush event cache so any twirling of the wheel during load gets ignored
+		pg.event.clear() # flush event cache so any twirling of the wheel during load gets ignored
 	
 		# Main Loop
 		idling = True # True COMMENT OUT NEXT LINE WHEN SETTING TO TRUE
@@ -374,9 +376,8 @@ def main():
 					nearLight.reset()
 					rudderIndicator.reset()
 					HMS_Squirrel.reset()
-					
 					HMS_Squirrel.steeringStart = pg.time.get_ticks()
-					pg.event.clear() # flush event cache so any twirling of the wheel during load gets ignored
+					#pg.event.clear() # flush event cache so any twirling of the wheel during load gets ignored
 		
 		else: # not idling
 			msgBox.hideMsg()
@@ -405,10 +406,18 @@ def main():
 			
 			if HMS_Squirrel.outOfChannel(farLight, nearLight):
 				msgBox.show("images/Messages/Msg_Crash.png", 4000)
+				farLight.reset()
+				nearLight.reset()
+				rudderIndicator.reset()
+				HMS_Squirrel.reset()
 				idling = True
 			
 			if HMS_Squirrel.completedPasseage():
 				msgBox.show("images/Messages/Msg_Success.png", 4000)
+				farLight.reset()
+				nearLight.reset()
+				rudderIndicator.reset()
+				HMS_Squirrel.reset()
 				idling = True
 			
 		allsprites.update()
