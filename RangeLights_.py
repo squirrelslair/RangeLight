@@ -68,7 +68,6 @@ class MsgBox(pg.sprite.Sprite):
 	def wait(self):           # wait until done; this would happen anyway, but having this allows to suspend game flow while waiting rather than keeping game flow going and eg crashing while msg is up      
 		if self.showing: 
 			pg.time.delay(self.showDuration) 
-			pg.event.clear() # flush event cache so any twirling of the wheel during wait gets ignored
 		
 	def update(self):
 		if self.EndShowAt > pg.time.get_ticks() or self.EndShowAt == -1 : 
