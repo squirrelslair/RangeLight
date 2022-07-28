@@ -34,4 +34,4 @@ else
 fi
 
 echo "starting RangeLights simulation"
-python3 /pi/home/RL/RangeLights_.py
+python3 /home/pi/RL/RangeLights_.py
