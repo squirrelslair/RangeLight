@@ -35,37 +35,41 @@ class MsgBox(pg.sprite.Sprite):
 		pg.sprite.DirtySprite.__init__(self)
 		self.imageBase, self.rect = load_image(messageImage)
 		self.image = self.imageBase.copy()
-		self.EndShow = 0
-		self.LastSteered = pg.time.get_ticks() - 10000000 # global time variable to track last steering event, used for msgbox re-hiding
-		self.hide()
-
-	def show(self, messageImage="", showDuration = 3000):
+		self.EndShowAt = -1                                 # time when to stop showing
+		self.showDuration = -1                              # duration for which to show
+		self.LastSteered = pg.time.get_ticks() - 10000000   # global time variable to track last steering event, used for msgbox re-hiding
+		self.hideMsg()
+		self.showing = False                                # set indicator variable so external code can see if showing
+	
+	def show(self, messageImage="", showDuration=3000):
+		self.showing = True                                 # change indicator variable so external code can see if showing
+		self.showDuration = showDuration
+		
 		if messageImage > "": 
 			self.imageBase, self.rect = load_image(messageImage)
 			self.image = self.imageBase.copy()
 		
-		# move onto screen
-		###self.rect.centerx = pg.display.get_window_size()[0]/2
-		self.rect.centerx = 2560/2
-		self.EndShow = pg.time.get_ticks() + showDuration #time in ms
-		# this can not take care of re-hiding because msgbox will only show 
-		# at next update/draw; update must do the re-hiding
+		self.rect.centerx = screenW/2                       # move onto screen
 		
-	def hide(self):
-		# move off screen
-		self.rect.left = screenW + 10
-
+		if showDuration == -1:
+			self.EndShowAt = -1
+		else: 
+			self.EndShowAt = pg.time.get_ticks() + showDuration #time in ms
+		# this method can not take care of re-hiding because msgbox will only show 
+		# at next update/draw; update method  must do the re-hiding
+		
+	def hideMsg(self):
+		self.showing = False                                # change indicator variable so external code can see if showing
+		self.rect.left = screenW + 10                       # move off screen
+	
+	def wait(self):           # wait until done; this would happen anyway, but having this allows to suspend game flow while waiting rather than keeping game flow going and eg crashing while msg is up      
+		pg.time.delay(self.showDuration) 
+		
 	def update(self):
-		if self.EndShow > pg.time.get_ticks(): 
-			# print("show time not passed yet: ES: ",self.EndShow, "   curr: ", pg.time.get_ticks())
-			pass # if time hasn't elapsed keep showing msg
-		
+		if self.EndShowAt > pg.time.get_ticks() or self.EndShowAt == -1 : 
+			pass                                            # keep showing msg - time hasn't elapsed or ShowDuration is -1 ie forever
 		else:
-			# print("show time has passed-----------------------------")
-			# print("LastSteered: ", self.LastSteered, "pgt-100: ", pg.time.get_ticks() - 100)
-			if self.LastSteered > pg.time.get_ticks() - 100:   # if there is a recent steering event
-				# print("steering input received, now hiding")
-				self.hide()
+			self.hideMsg()
 
 class RudderIndicator(pg.sprite.Sprite):
 	def __init__(self,arrowAngle):
@@ -257,10 +261,7 @@ class RangeLight(pg.sprite.Sprite):
 
 class backgroundVideo: 
 	def __init__(self, 
-				frameCount = 720, 
-				
-				#imgPath = "images/Background/IMG_2560x490/", # IMG_1920x490/", # "IMG_2560x490/"
-				#imgFilePrefix = "IMG_WAVE", 
+				frameCount = 4, #720, 
 				
 				imgPath = "images/Background/blenderWaves/",
 				imgFilePrefix = "waves2_", 
@@ -328,7 +329,6 @@ def main():
 		
 		# Create the backgound
 		background_top, background_top_rect = load_image("images/Background/IMG_BACKGROUND2560x690.bmp")
-		#background_top, background_top_rect = load_image("images/Background/IMG_BACKGROUND2560.bmp")
 		background_top.convert()
 		
 		Waves = backgroundVideo()
@@ -344,10 +344,10 @@ def main():
 		
 		#pygame.event.clear() # flush event cache so any twirling of the wheel during load gets ignored
 	
-	# Main Loop
-	idling = False # True COMMENT OUT NEXT LINE WHEN SETTING TO TRUE
-	steeringStart = pg.time.get_ticks() 
-	quitting = False
+		# Main Loop
+		idling = True # True COMMENT OUT NEXT LINE WHEN SETTING TO TRUE
+		#steeringStart = pg.time.get_ticks() 
+		quitting = False
 	
 	while not quitting:
 		###clock.tick(maxFramerate)
@@ -355,10 +355,7 @@ def main():
 		Waves.update(screen)
 		
 		if idling:
-			pg.time.delay(5000) # this allows the final message of the last run to 
-								# remain visible for a time before showing intro
-			msgBox.show("images/Messages/Msg_Intro.png", 0)
-			
+			msgBox.show("images/Messages/Msg_Intro.png", -1)
 			# reset range lights and rudder
 			farLight.reset()
 			nearLight.reset()
@@ -376,6 +373,8 @@ def main():
 					HMS_Squirrel.steeringStart = pg.time.get_ticks()
 		
 		else: # not idling
+			msgBox.hideMsg()
+			
 			# Handle Input Events
 			for event in pg.event.get():
 				if event.type == pg.QUIT:
@@ -398,22 +397,20 @@ def main():
 			farLight.travelRelativeTo(HMS_Squirrel.speed, prevBearing-HMS_Squirrel.bearing)
 			nearLight.travelRelativeTo(HMS_Squirrel.speed, prevBearing-HMS_Squirrel.bearing)
 			
-			print ("foo2") # without this the distToCtr never displays
 			if HMS_Squirrel.outOfChannel(farLight, nearLight):
-				# print("out of channel")
-				msgBox.show("images/Messages/Msg_Crash.png")
+				msgBox.show("images/Messages/Msg_Crash.png", 4000)
 				idling = True
 			
 			if HMS_Squirrel.completedPasseage():
-				# print("completed passage")
-				msgBox.show("images/Messages/Msg_Success.png")
+				msgBox.show("images/Messages/Msg_Success.png", 4000)
 				idling = True
 			
 		allsprites.update()
 		allsprites.draw(screen)
-		
 		pg.display.flip() # this is a "go" nothing flips direction here... 
-
+		
+		msgBox.wait()     # do any delaying required for msgboxes after they have been drawn
+		
 	pg.quit() # Game Over
 
 if __name__ == "__main__": # this calls the 'main' function when this script is executed
