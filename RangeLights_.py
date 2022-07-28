@@ -40,14 +40,17 @@ class MsgBox(pg.sprite.Sprite):
 		self.LastSteered = pg.time.get_ticks() - 10000000   # global time variable to track last steering event, used for msgbox re-hiding
 		self.hideMsg()
 		self.showing = False                                # set indicator variable so external code can see if showing
-	
+		self.messageImage = messageImage
+		
 	def show(self, messageImage="", showDuration=3000):
 		self.showing = True                                 # change indicator variable so external code can see if showing
 		self.showDuration = showDuration
+		self.messageImage = messageImage
 		
 		if messageImage > "": 
 			self.imageBase, self.rect = load_image(messageImage)
 			self.image = self.imageBase.copy()
+			self.messageImage = messageImage
 		
 		self.rect.centerx = screenW/2                       # move onto screen
 		
@@ -261,7 +264,7 @@ class RangeLight(pg.sprite.Sprite):
 
 class backgroundVideo: 
 	def __init__(self, 
-				frameCount = 4, #720, 
+				frameCount = 10, #720, 
 				
 				imgPath = "images/Background/blenderWaves/",
 				imgFilePrefix = "waves2_", 
@@ -355,12 +358,8 @@ def main():
 		Waves.update(screen)
 		
 		if idling:
-			msgBox.show("images/Messages/Msg_Intro.png", -1)
-			# reset range lights and rudder
-			farLight.reset()
-			nearLight.reset()
-			rudderIndicator.reset()
-			HMS_Squirrel.reset()
+			if msgBox.showing == False: # rather than always showing, hopefully this is faster and delays the bg video less
+				msgBox.show("images/Messages/Msg_Intro.png", -1)
 			
 			# check if idling should be over
 			for event in pg.event.get():
@@ -370,7 +369,14 @@ def main():
 					quitting = True
 				elif event.type == pg.KEYDOWN: # left, right any key
 					idling = False
+					# reset range lights and rudder
+					farLight.reset()
+					nearLight.reset()
+					rudderIndicator.reset()
+					HMS_Squirrel.reset()
+					
 					HMS_Squirrel.steeringStart = pg.time.get_ticks()
+					pg.event.clear() # flush event cache so any twirling of the wheel during load gets ignored
 		
 		else: # not idling
 			msgBox.hideMsg()
