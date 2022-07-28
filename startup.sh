@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# This script should be run by a scheduled task at reboot through crontab. 
+# To do this, run sudo crontab -e and add the following line to it
+# @reboot ___________what does this need to be? ________________
+
 echo "Range Light Simulator for Manitoba Marine Museum"
 echo "by your friends at The Squirrel's Lair!"
 echo "www.squirrelslair.ca"
