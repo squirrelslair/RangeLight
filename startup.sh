@@ -34,4 +34,6 @@ else
 	echo "Error mounting USB stick, continuing with normal boot."
 fi
 
-echo "this is where the command to start the simulation goes, depends on what the final filename is"
+echo "starting the rangelights simulation next"
+cd RL
+python3 RangeLights_.py
