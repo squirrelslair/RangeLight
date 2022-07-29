@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# This script should be run by a scheduled task at reboot through crontab. 
-# To do this, run sudo crontab -e and add the following line to it
-# @reboot ___________what does this need to be? ________________
+# FOR UPDATES TO WORK, THE USB STICK MUST BE FORMATTED WITH EXFAT
+# AND HAVE AN EXECUTABLE FILE CALLED SL_update.sh IN ITS ROOT DIRECTORY
+
+
 
 echo "Range Light Simulator for Manitoba Marine Museum"
 echo "by your friends at The Squirrel's Lair!"
@@ -10,12 +11,12 @@ echo "www.squirrelslair.ca"
 echo
 echo "If you intend to run an update, please insert the update USB stick"
 echo "into one of the available USB ports on the small grey box behind the"
-echo "display (Raspberry Pi) within the next 5 seconds."
+echo "display (Raspberry Pi) within the next 30 seconds."
 echo
-sleep 5s
+sleep 30s
 echo "Attempting to mount update USB stick."
 
-#commandLine=$(mount /dev/sda1 /home/pi/mnt)
+
 
 mount /dev/sda1 /home/pi/mnt
 if [ $? -eq  0 ]; then
@@ -33,5 +34,4 @@ else
 	echo "Error mounting USB stick, continuing with normal boot."
 fi
 
-echo "starting RangeLights simulation"
-python3 /home/pi/RL/RangeLights_.py
+echo "this is where the command to start the simulation goes, depends on what the final filename is"
