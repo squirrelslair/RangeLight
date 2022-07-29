@@ -35,5 +35,5 @@ else
 fi
 
 echo "starting the rangelights simulation next"
-cd RL
+cd /home/pi/RL
 python3 RangeLights_.py
