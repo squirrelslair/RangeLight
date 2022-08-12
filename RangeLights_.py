@@ -106,10 +106,10 @@ class Ship:
 	def __init__(self):
 		# set parameters
 		self.rudderPower = .0001	# .0001 OK fudge factor with which the rudder affects the bearing
-		self.speed = .01		# 0.01 OK - fudge factor at which the distance changes
+		self.speed = .005		# 0.01 OK - fudge factor at which the distance changes
 		self.maxRudder = 40
 		self.angleIncrement = 1
-		self.steeringTime = 38000 #  target duration in ms
+		self.steeringTime = 90000 #  target duration in ms
 		self.steeringStart = 0 # clock that will be used to keep track
 		self.platform = rumbler() # initialize the platform
 
@@ -265,8 +265,7 @@ class RangeLight(pg.sprite.Sprite):
 
 class backgroundVideo: 
 	def __init__(self, 
-				frameCount = 10, #720, 
-				
+				frameCount = 720, 				
 				imgPath = "images/Background/blenderWaves/",
 				imgFilePrefix = "waves2_", 
 				
@@ -340,8 +339,8 @@ def main():
 		# Prepare Game Objects
 		clock = pg.time.Clock()
 		HMS_Squirrel = Ship()
-		farLight = RangeLight("images/RangeLights/IMG_LIGHT_FAR.png", 25, 0.2, -12, -145) # 0.008 good start angle)
-		nearLight = RangeLight("images/RangeLights/IMG_LIGHT_NEAR.png", 20, 0.24, -10, -135) #0.05 good start)
+		farLight = RangeLight("images/RangeLights/IMG_LIGHT_FAR.png", 25, 0.2, -12, -145) 
+		nearLight = RangeLight("images/RangeLights/IMG_LIGHT_NEAR.png", 20, 0.24, -10, -135)
 		msgBox = MsgBox("images/Messages/Msg_Intro.png")
 		rudderIndicator = RudderIndicator(0)
 		allsprites = pg.sprite.RenderPlain((farLight, nearLight, rudderIndicator, msgBox))
